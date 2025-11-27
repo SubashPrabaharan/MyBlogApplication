@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>My Blog</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+          font-family: "Segoe UI", Arial, sans-serif;
+          background: #f4f6f9;
+          color: #2c3e50;
+        }
+
+        header {
+          background: #2c3e50;
+          color: #fff;
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          padding: 15px 30px;
+          box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+        }
+
+        header h1 { font-size: 24px; }
+
+        nav a, nav span {
+          color: #ecf0f1;
+          text-decoration: none;
+          margin-left: 20px;
+          font-weight: 500;
+          cursor: pointer;
+        }
+        nav a:hover { color: #3498db; }
+
+        .container { width: 90%; margin: auto; padding: 30px 0; }
+
+        #blog-posts {
+          display: flex;
+          flex-wrap: wrap;
+          gap: 25px;
+          justify-content: flex-start;
+        }
+
+        .blog-post {
+          background: linear-gradient(135deg, #ffffff, #f8f9fc);
+          flex: 1 1 calc(30% - 20px);
+          min-width: 280px;
+          padding: 20px;
+          border-radius: 12px;
+          box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+          transition: transform 0.25s ease, box-shadow 0.25s ease;
+          border: 1px solid #e6eaf0;
+          position: relative;
+        }
+        .blog-post:hover { transform: translateY(-5px); box-shadow: 0 8px 20px rgba(0,0,0,0.15); }
+
+        .blog-post h2 {
+          margin-bottom: 12px;
+          font-size: 20px;
+          font-weight: 600;
+          border-left: 4px solid #3498db;
+          padding-left: 10px;
+        }
+
+        .blog-post small {
+          display: inline-block;
+          background: #3498db;
+          color: #fff;
+          padding: 4px 10px;
+          border-radius: 20px;
+          font-size: 12px;
+        }
+
+        /* Three-dot menu */
+        .menu {
+          position: absolute;
+          top: 10px;
+          right: 10px;
+          cursor: pointer;
+          font-size: 18px;
+          padding: 5px;
+        }
+        .dropdown {
+          display: none;
+          position: absolute;
+          top: 30px;
+          right: 10px;
+          background: #fff;
+          border: 1px solid #ddd;
+          border-radius: 6px;
+          box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+          z-index: 10;
+        }
+        .dropdown a, .dropdown button {
+          display: block;
+          width: 100%;
+          padding: 8px 15px;
+          background: none;
+          border: none;
+          text-align: left;
+          font-size: 14px;
+          cursor: pointer;
+        }
+        .dropdown a:hover, .dropdown button:hover {
+          background: #f4f6f9;
+        }
+
+        /* New post section */
+        #newPostSection { margin: 20px 0; text-align: right; }
+        #newPostSection button {
+          background: #3498db;
+          color: #fff;
+          border: none;
+          padding: 10px 20px;
+          border-radius: 6px;
+          cursor: pointer;
+          font-size: 14px;
+          font-weight: 500;
+        }
+        #newPostForm {
+          background: #fff;
+          padding: 20px;
+          border-radius: 8px;
+          box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+          margin: 20px auto;
+          max-width: 600px;
+          display: none;
+        }
+        #newPostForm input, #newPostForm textarea {
+          width: 100%;
+          padding: 10px;
+          margin-bottom: 15px;
+          border: 1px solid #ccc;
+          border-radius: 5px;
+        }
+        footer {
+          text-align: center;
+          padding: 20px;
+          background: #2c3e50;
+          color: #fff;
+          margin-top: 40px;
+        }
+    </style>
+</head>
+<body>
+<header>
+    <h1>My Blog</h1>
+    <nav id="navbar"><a href="/Login.html">Login</a></nav>
+</header>
+
+<div id="newPostSection" style="display:none;">
+    <button onclick="togglePostForm()">➕ New Post</button>
+    <form id="newPostForm" method="post" action="/add-post">
+        <input type="text" name="title" placeholder="Enter Title" required>
+        <textarea name="content" placeholder="Write your blog..." rows="5" required></textarea>
+        <button type="submit">Post</button>
+    </form>
+</div>
+
+<div class="container">
+    <div id="blog-posts"></div>
+</div>
+
+<footer><p>&copy; 2025 My Blog. All Rights Reserved.</p></footer>
+
+<script>
+    let currentUser = "";
+
+    // Toggle new post form
+    function togglePostForm() {
+      let form = document.getElementById("newPostForm");
+      form.style.display = (form.style.display === "none") ? "block" : "none";
+    }
+
+
+    fetch("/get-username")
+      .then(res => res.text())
+      .then(username => {
+        if (username) {
+          currentUser = username;
+          document.getElementById("newPostSection").style.display = "block";
+          document.getElementById("navbar").innerHTML = `
+            <span>Welcome, ${username}</span>
+            <a href="/logout">Logout</a>
+          `;
+        }
+      });
+
+    // Load posts
+    async function loadPosts() {
+      let res = await fetch("/get-posts");
+      let posts = await res.json();
+      let container = document.getElementById("blog-posts");
+      container.innerHTML = "";
+
+      posts.forEach(p => {
+        let div = document.createElement("div");
+        div.className = "blog-post";
+
+        let postHTML = `
+          <h2>${p.title}</h2>
+          <p>${p.content}</p>
+          <small>By ${p.author}</small>
+        `;
+
+        if (p.author === currentUser) {
+          postHTML += `
+            <div class="menu" onclick="toggleDropdown(${p.id})">⋮</div>
+            <div class="dropdown" id="dropdown-${p.id}">
+              <button onclick="showEditForm(${p.id}, '${p.title}', '${p.content.replace(/'/g,"&#39;")}')">Edit</button>
+              <a href="/delete-post/${p.id}">Delete</a>
+            </div>
+            <form id="editForm-${p.id}" method="post" action="/edit-post/${p.id}" style="display:none; margin-top:10px;">
+              <input type="text" name="title" value="${p.title}" required>
+              <textarea name="content" required>${p.content}</textarea>
+              <button type="submit">Update</button>
+            </form>
+          `;
+        }
+
+        div.innerHTML = postHTML;
+        container.appendChild(div);
+      });
+    }
+
+    function toggleDropdown(id) {
+      let dropdown = document.getElementById("dropdown-" + id);
+      dropdown.style.display = (dropdown.style.display === "block") ? "none" : "block";
+    }
+
+    function showEditForm(id, title, content) {
+      let form = document.getElementById("editForm-" + id);
+      form.style.display = form.style.display === "none" ? "block" : "none";
+      toggleDropdown(id); // hide dropdown after choosing
+    }
+
+    loadPosts();
+</script>
+</body>
+</html>
